@@ -56,7 +56,8 @@ pub struct McatConfig {
         value_name = "format",
         help_heading = "Core Options",
         default_value_if("inline", "true", "inline"),
-        default_value_if("interactive", "true", "interactive")
+        default_value_if("interactive", "true", "interactive"),
+        default_value_if("output_md", "true", "md")
     )]
     pub output: Option<OutputFormat>,
 
@@ -67,6 +68,10 @@ pub struct McatConfig {
     /// Shortcut for --output interactive
     #[arg(short = 'I', help_heading = "Core Options")]
     interactive: bool,
+
+    /// Shortcut for --output md
+    #[arg(short = 'm', help_heading = "Core Options")]
+    output_md: bool,
 
     /// Show capabilities and terminal info
     #[arg(long, help_heading = "Core Options")]

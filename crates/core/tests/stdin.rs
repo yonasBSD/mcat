@@ -84,13 +84,16 @@ fn stdin_webm_detected_as_video() {
 }
 
 #[test]
-fn stdout_ends_with_newline() {
-    let output = Command::cargo_bin("mcat")
-        .unwrap()
-        .arg("-c")
-        .write_stdin("# Foo")
-        .output()
-        .unwrap();
-    assert!(output.status.success());
-    assert!(output.stdout.ends_with(b"\n"));
+fn stdout_single_trailing_newline() {
+    for args in [vec!["-c"], vec!["-c", "--output", "md"]] {
+        let output = Command::cargo_bin("mcat")
+            .unwrap()
+            .args(&args)
+            .write_stdin("# Foo\n")
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert!(output.stdout.ends_with(b"\n"));
+        assert!(!output.stdout.ends_with(b"\n\n"));
+    }
 }

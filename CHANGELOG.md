@@ -1,5 +1,6 @@
 ## Src
 
+- now when stdout isn't tty, and no output format was asked, mcat will act like a normal cat command, #86
 - added math dollars support for the markdown_viewer, just highlights
 - added callout blocks support for the markdown_viewer
 - added better support for qmd files, now treated as markdown

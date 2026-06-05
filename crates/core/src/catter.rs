@@ -31,6 +31,16 @@ pub fn cat(files: Vec<McatFile>, out: &mut impl Write, config: &McatConfig) -> R
         .wininfo
         .as_ref()
         .context("this is likely a bug, wininfo isn't set when inlining a video")?;
+    let is_tty = stdout().is_tty();
+
+    // if we don't have tty to print to, nor the user asked for a special format, we just merge the content like a
+    // normal cat command
+    if !is_tty && config.output.is_none() {
+        for f in &files {
+            out.write_all(&f.bytes)?;
+        }
+        return Ok(());
+    }
 
     // interactive mode
     if config
@@ -166,7 +176,6 @@ pub fn cat(files: Vec<McatFile>, out: &mut impl Write, config: &McatConfig) -> R
                 .to_markdown_input(config.inline_images_in_md)?
                 .convert()?;
 
-            let is_tty = stdout().is_tty();
             let use_color = match config.color {
                 ColorMode::Never => false,
                 ColorMode::Always => true,
