@@ -159,6 +159,12 @@ impl McatFile {
 
     fn detect_kind(bytes: &[u8], ext: Option<&str>) -> McatKind {
         let ext = ext.unwrap_or("");
+
+        // doesn't go well into our map
+        if ext == "mmd" && is_mermaid(bytes) {
+            return McatKind::Mermaid;
+        }
+
         let handlers: &[(Checker, &str, McatKind)] = &[
             (is_pdf, "", McatKind::Pdf),
             (is_gif, "", McatKind::Gif), // gif most be before video check.
@@ -167,11 +173,12 @@ impl McatFile {
             (is_exe, "", McatKind::Exe),
             (is_jxl, "", McatKind::JpegXL),
             (is_svg, "svg", McatKind::Svg),
-            (|_| false, "mermaid", McatKind::Mermaid), // mmd can mean mathpix markdown
+            (|_| false, "mermaid", McatKind::Mermaid),
             (|_| false, "html", McatKind::Html),
             (|_| false, "htm", McatKind::Html),
             (|_| false, "md", McatKind::Markdown),
             (|_| false, "qmd", McatKind::Markdown),
+            (|_| false, "mmd", McatKind::Markdown),
             (|_| false, "tex", McatKind::Tex),
             (|_| false, "typ", McatKind::Typst),
             (|_| false, "lnk", McatKind::Lnk),
@@ -746,4 +753,42 @@ fn is_svg(b: &[u8]) -> bool {
                 None | Some(b' ' | b'\t' | b'\n' | b'\r' | b'/')
             );
     }
+}
+
+#[rustfmt::skip]
+fn is_mermaid(b: &[u8]) -> bool {
+    const KEYWORDS: &[&str] = &[
+        "graph", "flowchart", "sequenceDiagram", "classDiagram",
+        "stateDiagram-v2", "stateDiagram", "erDiagram", "journey",
+        "gantt", "pie", "gitGraph", "mindmap", "timeline",
+        "quadrantChart", "requirementDiagram", "C4Context",
+        "sankey-beta", "xychart-beta", "block-beta",
+    ];
+
+    let head = &b[..b.len().min(2048)];
+    let s = String::from_utf8_lossy(head);
+    let mut lines = s.lines().peekable();
+
+    // skip YAML frontmatter
+    if lines.peek().map(|l| l.trim()) == Some("---") {
+        lines.next();
+        for line in lines.by_ref() {
+            if line.trim() == "---" {
+                break;
+            }
+        }
+    }
+
+    for line in lines {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with("%%") {
+            continue;
+        }
+
+        // first token
+        let first = line.split_whitespace().next().unwrap_or("");
+        let first = first.split('(').next().unwrap_or(first);
+        return KEYWORDS.contains(&first);
+    }
+    false
 }

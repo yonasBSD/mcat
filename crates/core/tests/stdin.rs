@@ -1,5 +1,8 @@
+use std::io::Write;
+
 use assert_cmd::Command;
 use predicates::prelude::*;
+use tempfile::Builder;
 
 #[test]
 fn stdin_is_rendered_as_markdown() {
@@ -96,4 +99,36 @@ fn stdout_single_trailing_newline() {
         assert!(output.stdout.ends_with(b"\n"));
         assert!(!output.stdout.ends_with(b"\n\n"));
     }
+}
+
+#[test]
+fn mmd_file_with_diagram_is_mermaid() {
+    let mut f = Builder::new().suffix(".mmd").tempfile().unwrap();
+    f.write_all(b"classDiagram\n  Animal <|-- Dog").unwrap();
+
+    Command::cargo_bin("mcat")
+        .unwrap()
+        .arg("--testing")
+        .arg(f.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("kind: Mermaid"));
+}
+
+#[test]
+fn mmd_file_with_mathpix_content_is_markdown() {
+    let mut f = Builder::new().suffix(".mmd").tempfile().unwrap();
+    f.write_all(b"# Theorem 1\n\nWe have \\( x^2 + y^2 = z^2 \\).")
+        .unwrap();
+
+    Command::cargo_bin("mcat")
+        .unwrap()
+        .arg("--testing")
+        .arg(f.path())
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::contains("kind: Markdown")
+                .or(predicate::str::contains("kind: PreMarkdown")),
+        );
 }

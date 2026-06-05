@@ -1,6 +1,7 @@
 ## Src
 
 - now when stdout isn't tty, and no output format was asked, mcat will act like a normal cat command, #86
+- improved the detection for `mermaid` files, now supports `mmd` ext, and if the content isn't mermaid its treated as mathpix (md)
 - added experimental flag `--md_kitty_headers` for rendering headers using kitty text sizing protocol, doesn't work well with pagers.
 - added math dollars support for the markdown_viewer, just highlights
 - added callout blocks support for the markdown_viewer

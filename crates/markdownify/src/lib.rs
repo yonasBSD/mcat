@@ -131,6 +131,15 @@ impl MarkdownifyInput {
         // add more here, also add ext checking in too
         let inline = self.allow_inline_images;
         let bytes = &self.bytes;
+        let ext = self.ext.clone().unwrap_or_default();
+
+        // special case for mermaid, since mmd is infested ext..
+        let ext = if ext == "mmd" && is_mermaid(bytes) {
+            "mermaid".to_owned()
+        } else {
+            ext
+        };
+
         let handlers: &[(Checker, &[&str], Parser)] = &[
             (
                 |_| false,
@@ -163,9 +172,9 @@ impl MarkdownifyInput {
                 let md = format!("```html\n{html}\n```");
                 Ok(md)
             }),
-            (|_| false, &["md", "qmd"], &|| parse_text(bytes)),
+            (|_| false, &["md", "qmd", "mmd"], &|| parse_text(bytes)),
         ];
-        let ext = self.ext.clone().unwrap_or_default();
+
         let result = handlers
             .iter()
             .find(|(check, exts, _)| check(bytes) || exts.contains(&ext.as_str()))
@@ -371,4 +380,66 @@ fn binary_fallback(path: Option<&str>, ext: Option<&str>) -> String {
     let path = path.unwrap_or("");
     let ext = ext.unwrap_or("Bin");
     format!("[{ext} file]({path})")
+}
+
+#[rustfmt::skip]
+fn is_mermaid(b: &[u8]) -> bool {
+    const KEYWORDS: &[&str] = &[
+        "graph", "flowchart", "sequenceDiagram", "classDiagram",
+        "stateDiagram-v2", "stateDiagram", "erDiagram", "journey",
+        "gantt", "pie", "gitGraph", "mindmap", "timeline",
+        "quadrantChart", "requirementDiagram", "C4Context",
+        "sankey-beta", "xychart-beta", "block-beta",
+    ];
+
+    let head = &b[..b.len().min(2048)];
+    let s = String::from_utf8_lossy(head);
+    let mut lines = s.lines().peekable();
+
+    // skip YAML frontmatter
+    if lines.peek().map(|l| l.trim()) == Some("---") {
+        lines.next();
+        for line in lines.by_ref() {
+            if line.trim() == "---" {
+                break;
+            }
+        }
+    }
+
+    for line in lines {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with("%%") {
+            continue;
+        }
+
+        // first token
+        let first = line.split_whitespace().next().unwrap_or("");
+        let first = first.split('(').next().unwrap_or(first);
+        return KEYWORDS.contains(&first);
+    }
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn convert_with_ext(bytes: &[u8], ext: &str) -> String {
+        let mut input = MarkdownifyInput::from_bytes(bytes.to_vec(), "t".into()).unwrap();
+        input.set_ext(ext.into());
+        input.convert().unwrap()
+    }
+
+    #[test]
+    fn mmd_with_diagram_is_not_treated_as_markdown() {
+        let out = convert_with_ext(b"graph TD\n  A --> B", "mmd");
+        assert!(out.starts_with("```"));
+        assert!(out.contains("graph TD"));
+    }
+
+    #[test]
+    fn mmd_with_mathpix_content_is_markdown() {
+        let out = convert_with_ext(b"# Theorem\n\n\\( x^2 \\)", "mmd");
+        assert_eq!(out, "# Theorem\n\n\\( x^2 \\)");
+    }
 }
