@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul};
+
 use comrak::nodes::{
     AstNode, NodeCode, NodeHeading, NodeHtmlBlock, NodeMath, NodeValue, NodeWikiLink,
 };
@@ -41,6 +43,7 @@ pub struct AnsiContext {
     pub wininfo: Wininfo,
     pub hide_line_numbers: bool,
     pub show_frontmatter: bool,
+    pub render_kitty_headers: bool,
     pub center: bool,
     pub image_preprocessor: ImagePreprocessor,
 
@@ -473,6 +476,10 @@ fn render_heading<'a>(node: &'a AstNode<'a>, ctx: &mut AnsiContext) -> String {
         panic!()
     };
 
+    if level < 3 && ctx.render_kitty_headers {
+        return render_heading_kitty(node, ctx);
+    }
+
     ctx.under_header = true;
     let content = collect(node, ctx, "");
     let content = trim_ansi_string(content);
@@ -498,13 +505,54 @@ fn render_heading<'a>(node: &'a AstNode<'a>, ctx: &mut AnsiContext) -> String {
         );
         format!("{main_color}{bg}{content}{padding}{RESET}")
     } else {
-        // center here
         let le = string_len(&content);
         let left_space = (ctx.wininfo.sc_width as usize).saturating_sub(le);
         let padding_left = left_space.saturating_div(2);
         let padding_rigth = left_space - padding_left;
         format!(
             "{main_color}{bg}{}{content}{}{RESET}",
+            " ".repeat(padding_left),
+            " ".repeat(padding_rigth)
+        )
+    }
+}
+
+/// exp method, since it doesn't work well with less
+/// I do multiple things to try and mitigate it:
+/// 1. no newlines, I spam spaces to create those "new lines"
+/// 2. i put 2 newlines and scroll up on every header, fixes the first heading in less not having
+///    enough space to render.
+/// also i don't think the bg is possible without the spamming of spaces, and without bg it looks
+/// bad imo
+fn render_heading_kitty<'a>(node: &'a AstNode<'a>, ctx: &mut AnsiContext) -> String {
+    let NodeValue::Heading(NodeHeading { level, .. }) = node.data.borrow().value else {
+        panic!()
+    };
+
+    ctx.under_header = true;
+    let content = collect(node, ctx, "");
+    let main_color = &ctx.theme.keyword.fg;
+    let bg = &ctx.theme.keyword_bg.bg;
+
+    let content = trim_ansi_string(content);
+    let content = match level {
+        1 => format!(" 󰎤 {content}"),
+        2 => format!(" 󰎧 {content}"),
+        _ => unreachable!(),
+    };
+    let le = string_len(&content) * 2;
+    let content = format!("\x1b]66;s=2;{content}\x07");
+    let content = content.replace(RESET, &format!("{RESET}{bg}"));
+
+    if !ctx.center {
+        let padding = " ".repeat(ctx.wininfo.sc_width.saturating_sub(le as u16).mul(2).into());
+        format!("\n\n\x1B[2A{main_color}{bg}{content}{padding}{RESET}")
+    } else {
+        let left_space = (ctx.wininfo.sc_width as usize).saturating_sub(le);
+        let padding_left = left_space.saturating_div(2);
+        let padding_rigth = (left_space - padding_left).mul(2).add(padding_left);
+        format!(
+            "\n\n\x1B[2A{main_color}{bg}{}{content}{}{RESET}",
             " ".repeat(padding_left),
             " ".repeat(padding_rigth)
         )

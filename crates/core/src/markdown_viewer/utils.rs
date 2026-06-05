@@ -848,6 +848,7 @@ mod tests {
             hide_line_numbers: false,
             show_frontmatter: false,
             center: false,
+            render_kitty_headers: false,
             image_preprocessor: ImagePreprocessor::new(root, &conf, None).unwrap(),
             blockquote_fenced_offset: None,
             collecting_depth: 0,

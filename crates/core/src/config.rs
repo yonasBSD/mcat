@@ -125,6 +125,10 @@ pub struct McatConfig {
     #[arg(long, help_heading = "Markdown Viewing")]
     pub toc: bool,
 
+    /// Enable Experimental support for kitty text-sizing protocol
+    #[arg(long, help_heading = "Markdown Viewing")]
+    pub md_kitty_headers: bool,
+
     /// Disable line numbers in code blocks
     #[arg(long, help_heading = "Markdown Viewing")]
     pub no_linenumbers: bool,

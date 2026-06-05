@@ -47,6 +47,7 @@ pub fn md_to_ansi(
         theme,
         wininfo: config.wininfo.unwrap(),
         hide_line_numbers: config.no_linenumbers,
+        render_kitty_headers: config.md_kitty_headers,
         center: false,
         image_preprocessor,
         show_frontmatter: config.header,
