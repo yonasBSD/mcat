@@ -11,7 +11,7 @@ Parse, Convert and Preview files
 
 [Installation](#installation) • [Examples](#example-usage) • [CHANGELOG](./CHANGELOG.md)
 
-![mcat_demo](https://github.com/Skardyy/assets/blob/main/mcat_opt.gif)
+![mcat_demo](https://github.com/Skardyy/assets-for-repos/blob/main/mcat_opt.gif)
 
 </div>
 
