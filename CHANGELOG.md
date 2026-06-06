@@ -1,4 +1,4 @@
-## Src
+## V0.6.2
 
 - now when stdout isn't tty, and no output format was asked, mcat will act like a normal cat command, #86
 - improved the detection for `mermaid` files, now supports `mmd` ext, and if the content isn't mermaid its treated as mathpix (md)
