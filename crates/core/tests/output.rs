@@ -1,9 +1,12 @@
+use std::io::Write;
+
 use assert_cmd::Command;
 use base64::{
     Engine,
     engine::general_purpose::{self},
 };
 use predicates::prelude::*;
+use tempfile::Builder;
 
 #[test]
 fn stdin_md_output_is_raw_markdown() {
@@ -74,4 +77,38 @@ fn stdin_pdf_output_is_image() {
 
     assert!(output.status.success());
     assert!(output.stdout.starts_with(b"\x89PNG"));
+}
+
+#[test]
+fn rust_file_piped_is_raw() {
+    let mut f = Builder::new().suffix(".rs").tempfile().unwrap();
+    f.write_all(b"fn main() { println!(\"Hello\"); }\n")
+        .unwrap();
+
+    let output = Command::cargo_bin("mcat")
+        .unwrap()
+        .arg(f.path())
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"fn main() { println!(\"Hello\"); }\n");
+}
+
+#[test]
+fn multiple_files_piped_concatenated_raw() {
+    let mut a = Builder::new().suffix(".rs").tempfile().unwrap();
+    a.write_all(b"fn a() {}\n").unwrap();
+    let mut b = Builder::new().suffix(".rs").tempfile().unwrap();
+    b.write_all(b"fn b() {}\n").unwrap();
+
+    let output = Command::cargo_bin("mcat")
+        .unwrap()
+        .arg(a.path())
+        .arg(b.path())
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"fn a() {}\nfn b() {}\n");
 }
