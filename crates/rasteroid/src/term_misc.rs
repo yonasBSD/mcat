@@ -155,6 +155,20 @@ impl Wininfo {
         let scalex = scalex.unwrap_or(1.0);
         let scaley = scaley.unwrap_or(1.0);
 
+        // fallback, spx is most likely to be the issue, if sc is not set its unusable anyways imo
+        if sc_width == 0 {
+            sc_width = 80;
+        }
+        if sc_height == 0 {
+            sc_height = 24;
+        }
+        if spx_width == 0 {
+            spx_width = 1920;
+        }
+        if spx_height == 0 {
+            spx_height = 1080;
+        }
+
         Ok(Wininfo {
             sc_height: (sc_height as f32 * scaley) as u16,
             sc_width: (sc_width as f32 * scalex) as u16,
